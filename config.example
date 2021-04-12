@@ -1,0 +1,9 @@
+[credentials]
+email = <your_email>
+password = <your_password>
+
+[mail]
+login = <your_login>
+password = <your_password>
+sender = <sender_email>
+receiver = <receiver_email>
