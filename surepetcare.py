@@ -16,10 +16,27 @@ from weboob.tools.date import utc2local
 
 class SurepetcareBrowser(APIBrowser):
     BASEURL = 'https://app.api.surehub.io'
-    SUNRISE_DELTA = 0.5
-    SUNSET_DELTA = 1.2
     BATTERY_ALERT = 0.3
-    IS_SUMMER = 1  # 0 or 1
+    SEASON = 'winter'
+    # XXX verify -1 hour due to +01:00 set on time
+    TIME_CONFIG = {
+        'summer': {
+            'delta': {
+                'sunrise': 0.5,
+                'sunset': 1.5,
+            },
+            'min': "08:30:00",  # -1 hour
+            'max': "17:30:00",  # -1 hour
+        },
+        'winter': {
+            'delta': {
+                'sunrise': 0,
+                'sunset': 1,
+            },
+            'min': "07:00:00",  # -1 hour
+            'max': "15:00:00",  # -1 hour
+        },
+    }
 
     def __init__(self, config, *args, **kwargs):
         super(SurepetcareBrowser, self).__init__(*args, **kwargs)
@@ -37,14 +54,17 @@ class SurepetcareBrowser(APIBrowser):
         for sun_state in ('sunrise', 'sunset'):
             time = utc2local(datetime.strptime(results[sun_state].split()[0], '%H:%M:%S'))
 
+            time_config = self.TIME_CONFIG[self.SEASON]
+            is_summer = int(self.SEASON == "summer")
             if sun_state == "sunrise":
-                time += relativedelta(hours=self.SUNRISE_DELTA + self.IS_SUMMER)
+                time += relativedelta(hours=time_config['delta']['sunrise'] + is_summer)
+                time = min(time, utc2local(datetime.strptime(time_config['min'], '%H:%M:%S')))
                 curfew['unlock_time'] = time.strftime('%H:%M')
             else:
                 # convert to 24 hours format
-                time += relativedelta(hours=12 + self.IS_SUMMER)
-                time -= relativedelta(hours=self.SUNSET_DELTA)
-                time = max(time, utc2local(datetime.strptime('17:30:00', '%H:%M:%S')))
+                time += relativedelta(hours=12 + is_summer)
+                time -= relativedelta(hours=time_config['delta']['sunset'])
+                time = max(time, utc2local(datetime.strptime(time_config['max'], '%H:%M:%S')))
                 curfew['lock_time'] = time.strftime('%H:%M')
 
         return curfew
