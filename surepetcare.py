@@ -16,7 +16,7 @@ from weboob.tools.date import utc2local
 
 class SurepetcareBrowser(APIBrowser):
     BASEURL = 'https://app.api.surehub.io'
-    BATTERY_ALERT = 0.3
+    BATTERY_ALERT = 0  # 0 to 100
     SEASON = 'winter'
     # XXX verify -1 hour due to +01:00 set on time
     TIME_CONFIG = {
@@ -98,13 +98,30 @@ class SurepetcareBrowser(APIBrowser):
 
     @need_login
     def set_curfew(self):
+        """
+        for battery not sure how it works but what I see is :
+
+        5.679 = full
+        5.589 = 3 bars
+        5.406 = 3 bars
+        5.337 = 2 bars
+        5.188 = 2 bars
+        4.849 = empty
+        3.916 = empty
+        """
         for device in self.request('/api/me/start')['data']['devices']:
             if 'chatiere' in device['name'].lower():
                 battery = device['status']['battery']
-                if battery and (battery / 10) < self.BATTERY_ALERT:
+                empty = 4.849
+                full = 5.679
+                battery = max(0, round((battery - empty) / (full - empty) * 100))
+
+                if battery and battery <= self.BATTERY_ALERT:
                     self.send_mail(
                         "Chatière - Batterie faible !",
-                        "La batterie de la chatière est faible, il reste seulement %s pourcents !" % (device['status']['battery'] * 10)
+                        f"La batterie de la chatière est faible ({battery} %) !\n"
+                        "Attention les petits chats d'amour vont être coincés ! :0\n"
+                        "Donc on s'active et on va recharger les piles, okey ?!\n"
                     )
 
                 device_id = device['id']
