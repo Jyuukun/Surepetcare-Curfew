@@ -16,7 +16,7 @@ from weboob.tools.date import utc2local
 
 class SurepetcareBrowser(APIBrowser):
     BASEURL = 'https://app.api.surehub.io'
-    BATTERY_ALERT = 0  # 0 to 100
+    BATTERY_ALERT = 15  # 0 to 100
     SEASON = 'winter'
     # XXX verify -1 hour due to +01:00 set on time
     TIME_CONFIG = {
