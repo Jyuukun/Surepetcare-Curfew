@@ -15,26 +15,27 @@ from weboob.tools.date import utc2local
 
 
 class SurepetcareBrowser(APIBrowser):
+    TIMEOUT = 20
     BASEURL = 'https://app.api.surehub.io'
+
     BATTERY_ALERT = 15  # 0 to 100
     SEASON = 'winter'
-    # XXX verify -1 hour due to +01:00 set on time
     TIME_CONFIG = {
         'summer': {
             'delta': {
                 'sunrise': 0.5,
                 'sunset': 1.5,
             },
-            'min': "08:30:00",  # -1 hour
-            'max': "17:30:00",  # -1 hour
+            'min': "08:30:00",  # +1 hour
+            'max': "17:30:00",  # +1 hour
         },
         'winter': {
             'delta': {
                 'sunrise': 0,
                 'sunset': 1,
             },
-            'min': "07:00:00",  # -1 hour
-            'max': "15:00:00",  # -1 hour
+            'min': "07:00:00",  # +1 hour
+            'max': "17:00:00",  # +1 hour
         },
     }
 
