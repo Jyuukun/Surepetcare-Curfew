@@ -19,23 +19,27 @@ class SurepetcareBrowser(APIBrowser):
     BASEURL = 'https://app.api.surehub.io'
 
     BATTERY_ALERT = 15  # 0 to 100
-    SEASON = 'winter'
+    SEASON = 'summer'
     TIME_CONFIG = {
         'summer': {
             'delta': {
-                'sunrise': 0.5,
+                'sunrise': 0,
                 'sunset': 1.5,
             },
-            'min': "08:30:00",  # +1 hour
-            'max': "17:30:00",  # +1 hour
+            # latest morning curfew, capped at sunrise (+ delta).
+            # e.g., if sunrise is 07:25 and unlock_max is 06:00, curfew is set to 07:00 (+1 hour).
+            'unlock_max': "06:00",  # +1 hour
+            # earliest evening curfew, set no earlier than sunset (- delta).
+            # e.g., if sunset is 18:40 and lock_min is 18:00, curfew is set to 19:00 (+1 hour).
+            'lock_min': "18:00",  # +1 hour
         },
         'winter': {
             'delta': {
                 'sunrise': 0,
                 'sunset': 1,
             },
-            'min': "07:00:00",  # +1 hour
-            'max': "17:00:00",  # +1 hour
+            'unlock_max': "07:00",  # +1 hour
+            'lock_min': "16:30",  # +1 hour
         },
     }
 
@@ -56,17 +60,18 @@ class SurepetcareBrowser(APIBrowser):
             time = utc2local(datetime.strptime(results[sun_state].split()[0], '%H:%M:%S'))
 
             time_config = self.TIME_CONFIG[self.SEASON]
+            # used to add one hour to data we receive with API
             is_summer = int(self.SEASON == "summer")
             if sun_state == "sunrise":
                 time += relativedelta(hours=time_config['delta']['sunrise'] + is_summer)
-                time = min(time, utc2local(datetime.strptime(time_config['min'], '%H:%M:%S')))
-                curfew['unlock_time'] = time.strftime('%H:%M')
+                unlock_max = utc2local(datetime.strptime(time_config['unlock_max'], '%H:%M'))
+                curfew['unlock_time'] = min(time, unlock_max).strftime('%H:%M')
             else:
                 # convert to 24 hours format
                 time += relativedelta(hours=12 + is_summer)
                 time -= relativedelta(hours=time_config['delta']['sunset'])
-                time = max(time, utc2local(datetime.strptime(time_config['max'], '%H:%M:%S')))
-                curfew['lock_time'] = time.strftime('%H:%M')
+                lock_min = utc2local(datetime.strptime(time_config['lock_min'], '%H:%M'))
+                curfew['lock_time'] = max(time, lock_min).strftime('%H:%M')
 
         return curfew
 
