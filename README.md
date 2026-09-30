@@ -19,7 +19,7 @@ A Python automation tool to manage the curfew schedule of Sure Petcare cat flaps
 
 1. Clone this repository:
     ```bash
-    git clone <repo-url>
+    git clone https://github.com/Jyuukun/Surepetcare-Curfew.git
     cd Surepetcare-Curfew
     ```
 2. Install dependencies:
