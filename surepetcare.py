@@ -7,11 +7,11 @@ import smtplib
 
 from configparser import ConfigParser
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 from weboob.browser.browsers import APIBrowser, need_login
 from weboob.exceptions import BrowserIncorrectPassword
-from weboob.tools.date import utc2local
+
+from curfew import PARIS, acclimatization_from_config, curfew_times, season_settings_from_config
 
 
 class SurepetcareBrowser(APIBrowser):
@@ -19,29 +19,6 @@ class SurepetcareBrowser(APIBrowser):
     BASEURL = 'https://app.api.surehub.io'
 
     BATTERY_ALERT = 15  # 0 to 100
-    SEASON = 'summer'
-    TIME_CONFIG = {
-        'summer': {
-            'delta': {
-                'sunrise': 0,
-                'sunset': 1.5,
-            },
-            # latest morning curfew, capped at sunrise (+ delta).
-            # e.g., if sunrise is 07:25 and unlock_max is 06:00, curfew is set to 07:00 (+1 hour).
-            'unlock_max': "06:00",  # +1 hour
-            # earliest evening curfew, set no earlier than sunset (- delta).
-            # e.g., if sunset is 18:40 and lock_min is 18:00, curfew is set to 19:00 (+1 hour).
-            'lock_min': "18:00",  # +1 hour
-        },
-        'winter': {
-            'delta': {
-                'sunrise': 0,
-                'sunset': 1,
-            },
-            'unlock_max': "07:00",  # +1 hour
-            'lock_min': "16:30",  # +1 hour
-        },
-    }
 
     def __init__(self, config, *args, **kwargs):
         super(SurepetcareBrowser, self).__init__(*args, **kwargs)
@@ -49,31 +26,25 @@ class SurepetcareBrowser(APIBrowser):
 
     @property
     def curfew(self):
+        today = datetime.now(PARIS).date()
+
         results = self.request(
             'https://api.sunrise-sunset.org/json',
-            params={'lat': 49.41794, 'lng': 2.82606,}
+            params={'lat': 49.41794, 'lng': 2.82606, 'formatted': 0, 'date': today.isoformat()}
         )['results']
 
-        curfew = {'enabled': True}
+        unlock_time, lock_time = curfew_times(
+            datetime.fromisoformat(results['sunrise']),
+            datetime.fromisoformat(results['sunset']),
+            season_settings_from_config(self.config, today),
+            acclimatization_from_config(self.config),
+        )
 
-        for sun_state in ('sunrise', 'sunset'):
-            time = utc2local(datetime.strptime(results[sun_state].split()[0], '%H:%M:%S'))
-
-            time_config = self.TIME_CONFIG[self.SEASON]
-            # used to add one hour to data we receive with API
-            is_summer = int(self.SEASON == "summer")
-            if sun_state == "sunrise":
-                time += relativedelta(hours=time_config['delta']['sunrise'] + is_summer)
-                unlock_max = utc2local(datetime.strptime(time_config['unlock_max'], '%H:%M'))
-                curfew['unlock_time'] = min(time, unlock_max).strftime('%H:%M')
-            else:
-                # convert to 24 hours format
-                time += relativedelta(hours=12 + is_summer)
-                time -= relativedelta(hours=time_config['delta']['sunset'])
-                lock_min = utc2local(datetime.strptime(time_config['lock_min'], '%H:%M'))
-                curfew['lock_time'] = max(time, lock_min).strftime('%H:%M')
-
-        return curfew
+        return {
+            'enabled': True,
+            'unlock_time': unlock_time.strftime('%H:%M'),
+            'lock_time': lock_time.strftime('%H:%M'),
+        }
 
     def do_login(self):
         r = self.request(

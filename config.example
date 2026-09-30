@@ -7,3 +7,24 @@ login = <your_login>
 password = <your_password>
 sender = <sender_email>
 receiver = <receiver_email>
+
+# Curfew bounds in Paris local time. The season follows French summer time.
+# Unlock at sunrise, never after unlock_max. Lock at sunset - sunset_delta (hours), never before lock_min.
+[curfew.summer]
+unlock_max = 07:00
+lock_min = 19:00
+sunset_delta = 1.5
+
+[curfew.winter]
+unlock_max = 08:00
+lock_min = 17:30
+sunset_delta = 1
+
+# Optional: after a move, lock earlier and push the lock time later every day.
+# Lock at lock_time + step_minutes per day since start, never unlock before unlock_time,
+# until the ramp reaches the normal lock time. Remove the section once it is over.
+# [acclimatization]
+# start = 2026-10-01
+# lock_time = 12:00
+# step_minutes = 15
+# unlock_time = 08:00
