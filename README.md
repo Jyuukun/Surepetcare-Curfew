@@ -68,7 +68,7 @@ step_minutes = 15
 unlock_time = 08:00
 ```
 
-Each daily run locks at `lock_time + step_minutes × days since start` and never unlocks before `unlock_time`.
+Before `start`, the section is ignored. Each daily run locks at `lock_time + step_minutes × days since start` and never unlocks before `unlock_time`.
 When this lock time reaches the normal sunset lock time, the section has no effect any more: remove it when you want.
 
 ## Tests
@@ -84,6 +84,12 @@ Run the script manually:
 
 ```bash
 python surepetcare.py
+```
+
+Add `-v` to log the API calls (method, path, status) and the curfew sent to the flap (colored when the output is a terminal):
+
+```bash
+python surepetcare.py -v
 ```
 
 Or add to your crontab for daily automation:
