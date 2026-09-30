@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import argparse
+import logging
 import os
 import sys
 import signal
@@ -10,6 +12,7 @@ from datetime import datetime
 
 from weboob.browser.browsers import APIBrowser, need_login
 from weboob.exceptions import BrowserIncorrectPassword
+from weboob.tools.log import createColoredFormatter
 
 from curfew import PARIS, acclimatization_from_config, curfew_times, season_settings_from_config
 
@@ -104,9 +107,11 @@ class SurepetcareBrowser(APIBrowser):
                 device_id = device['id']
                 break
 
+        curfew = self.curfew
+        self.logger.info('Setting curfew on device %s: %s', device_id, curfew)
         self.request(
             '/api/device/%s/control' % device_id,
-            method='PUT', data={"curfew": [self.curfew]}
+            method='PUT', data={"curfew": [curfew]}
         )
 
 
@@ -122,6 +127,16 @@ def signal_handler(signal, frame):
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
+
+    parser = argparse.ArgumentParser(description='Set the Sure Petcare cat flap curfew.')
+    parser.add_argument('-v', '--verbose', action='store_true', help='log API calls and the curfew sent')
+    args = parser.parse_args()
+    if args.verbose:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            createColoredFormatter(handler.stream, '%(asctime)s %(name)s %(levelname)s %(message)s')
+        )
+        logging.basicConfig(level=logging.DEBUG, handlers=[handler])
 
     config = get_config()
     SurepetcareBrowser(config).set_curfew()
